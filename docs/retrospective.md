@@ -1,55 +1,63 @@
-# What I learned building this bot
+# A bot, many test runs, and a useful reality check
 
-I entered the challenge without having built a binary-options market maker before. The financial definition was straightforward: the contract pays either zero or one. Understanding the exchange took longer. I wanted to know whether I was trading against other participants or preset bots, what RFQs revealed, and why selling a cheap contract could use more cash than buying it.
+[中文](retrospective.zh-CN.md)
 
-I also asked whether running the tests would affect the bot's cash in later runs. Looking back, that question captures where I started: I was still trying to distinguish the program, the simulation and a trading account.
+This was my first attempt at making a market in binary options. The payoff was easy enough to understand: an event happens, the contract pays one; otherwise, zero. The exchange took a little more getting used to.
 
-## Getting something to run
+Who was I trading with? Why did an RFQ hide the customer's direction? Why couldn't I accept just part of a FOK? And how could selling a contract for 20 cents tie up more cash than buying it?
 
-The first version was deliberately small. It quoted 0 to buy and 1 to sell, with quantity one, and ignored almost every FOK. The trading tests passed because the bot survived. The pricing test failed because a placeholder returned `None`, and then because the replacement returned 0.5 for every contract.
+I also asked whether running a test would change the bot's cash balance in the next run. That is probably the best description of my starting point. I was learning the market mechanics and parts of Python as I went, with ChatGPT and Codex helping me unpack the rules, debug errors and turn ideas into code I could actually follow.
 
-Passing 19 out of 20 sounded promising until I understood what a pass meant. The short diagnostic sessions awarded full credit for avoiding errors and bankruptcy. The longer sessions still gave partial credit to a maker that survived while barely trading. I needed to read the PnLs and rankings, not just count green tests.
+## First, keep the lights on
 
-I built the pricer in stages. First came the discrete FED process, then the individual companies, then comparisons between them. At the same time I was learning Python details such as why `distribution.items()` needs parentheses and how type annotations differ from assignment. Breaking the code into pieces I could run made it much easier to follow.
+The first bot bought at 0, sold at 1, quoted one contract on each side and ignored almost every FOK. It was excellent at avoiding trouble and rather less interested in trading.
 
-The supplied-parameter pricing examples eventually matched the logged reference values. That was a useful checkpoint. It established that I could calculate a probability from the model; it did not tell me how accurately I could estimate the model from a short history.
+It passed 19 out of 20 tests. The remaining pricing test failed first because I returned `None`, then because I returned 0.5 for everything. Meanwhile, the green trading tests were mostly telling me that the bot had survived. The short diagnostic sessions rewarded that; the longer sessions could still award partial credit to a bot sitting near the bottom of the ranking.
 
-## Spending too long on the wrong constraint
+So I started reading the PnLs and rankings, not just the pass count.
 
-I initially focused on FOK orders because their direction, price and quantity are visible before accepting them. It seemed easier to make a careful yes-or-no decision than to compete through a two-sided RFQ quote.
+I built the pricer a piece at a time: the discrete FED process, the two companies, then contracts comparing their valuations. Along the way, I learned why `distribution.items()` needs parentheses, what type annotations do, and why people write `for _ in ...`. Writing something small enough to test and explain was much more useful to me than receiving a finished wall of code.
 
-After many small adjustments, I started questioning whether that was the right priority. I kept getting the same outputs back. Even when the prices changed, the bot was often offering only one contract. The size limit was restricting how much difference the pricing changes could make.
+Eventually the supplied-parameter examples matched the logged reference values. That settled one question: given the model, could I calculate the probability? Estimating that model from a short history was still a separate problem.
 
-Increasing boundary-price quantity from one to ten produced the clearest early improvement. In one development session, PnL went from 6 to 27. Those fills had zero worst-case loss at the quoted price. Active quotes needed a different treatment: quantity had to fit both the cash budget and the inventory limit.
+## The breakthrough was hiding in `quantity=1`
 
-That experience changed how I debugged the strategy. When a parameter did not affect the result, I began looking for another constraint that prevented it from reaching the exchange: quantity, a cash floor, a position cap, a rounding tick, or a model-readiness branch.
+I spent a while on FOKs. The direction, price and size were all visible, so deciding yes or no felt more approachable than competing for RFQ flow with a two-sided quote.
 
-## Experiments and version confusion
+But after enough tiny changes, I began asking whether we were polishing the wrong part of the bot. Some adjustments did nothing. Others changed the PnL by a few cents. The goal was to compete in the sessions, not to produce the world's most carefully considered rejection of a FOK.
 
-The later code did not arrive in one clean design. I tried wider and narrower spreads, capital-scaled sizes, rolling calibration and several inventory rules. I also tried counterparty markouts, signals from FOK prices and directions, and small spread probes after repeated unsuccessful RFQs.
+Then came the fairly unglamorous discovery: we were still quoting one contract.
 
-Some experiments had no observable effect. Others produced a trade-off that was hard to judge. An always-on inventory adjustment improved the worst recorded session but made another session lose its first-place score. A later guard kept the inventory idea but activated only at high utilization; its development result vector was identical to the previous baseline.
+Changing boundary-price quantity from 1 to 10 took one development session's PnL from 6 to 27. Buying at 0 or selling at 1 had zero worst-case loss under the challenge's rules, so these fills did not need the same sizing treatment as active quotes. Active size still had to fit the cash budget and inventory limit.
 
-By then there were too many similar versions. I started keeping the full PnL and score vectors rather than relying on a name like "new version." I retained a stable version and compared each candidate with it. This discipline came out of getting confused; it was not how the project began.
+That became a useful debugging habit. If a change did nothing, I checked whether it could actually reach the market. Was quantity capped? Was the cash floor binding? Did the position limit, cent rounding or `model_ready` branch quietly switch it off?
 
-I also learned that total PnL was an awkward target for this contest. Making much more money in a session where the bot was already first did not increase the score. Small changes in another session could change the ranking and therefore the score. One losing session still earned full credit because everyone else lost more.
+## A small collection of almost-identical versions
 
-## The result, and the limit of my evidence
+From there I tried different half-spreads, capital-scaled sizes, rolling parameter estimates and inventory adjustments. I also explored counterparty markouts, signals from FOK prices and directions, and small spread changes after RFQs that failed to trade.
 
-The final V7B version reached 18.5/20 on the development tests, including 14.5/16 across the scored trading sessions. Twelve of those sixteen sessions earned full credit. I did not finish in the top 30 in the final competition results.
+Some ideas had no visible effect. Some helped one session and hurt another. An always-on inventory adjustment improved the worst recorded session but cost a first-place finish elsewhere. A later guard kept the inventory idea and activated only at high utilization; its development results were exactly the same as the earlier baseline.
 
-I had worried about hidden tests during development, particularly when a rule only affected one familiar case. That concern was justified, but I did not build a sufficiently independent evaluation process before the deadline. I kept returning to the same result vectors to decide which changes were good.
+I also got my versions mixed up. Names like “new version” stopped being useful surprisingly quickly. I began saving all sixteen PnLs and scores, keeping a stable baseline and comparing one candidate at a time. The tidy experiment records in this repo arrived after the untidy part.
 
-I cannot identify the exact reason for the final ranking without the final per-session results. There are concrete weaknesses in the code, though. The smaller-capital sessions keep their opening parameter estimates. The readiness flag can remain fixed even after more observations arrive. Several execution rules depend on capital buckets. The collateral balance is also used in a "profit cushion" condition even though cash can fall simply because it is tied up in open positions.
+The scoring added another wrinkle. More total profit was not always worth more points. A large improvement in a session I already won could earn nothing extra; a small ranking change elsewhere could matter a lot. In one session, losing money still earned full credit because every other maker lost more. An unusual result to celebrate, but those were the rules.
 
-Those choices helped preserve observed development results. I had not established that they were good decisions across new environments.
+## What 18.5 did—and didn't—tell me
 
-## What the next version would need
+The final V7B reached **18.5/20 on the development tests**: 14.5/16 across the scored trading sessions, with twelve of those sixteen earning full credit. In the final competition results, **I did not finish in the top 30**.
 
-After the contest I read other participants' code and found the community arena. That made the missing piece clearer: I needed a way to run more markets without treating each familiar test as a target.
+I had already been asking about hidden tests. Why did an inventory rule affect only one familiar case? Were the initial-capital thresholds reasonable risk controls, or were they becoming shortcuts for recognising the test set? Those were useful questions, but I did not give them a proper independent evaluation before the deadline. I kept coming back to the same result vectors to choose the next change.
 
-I would vary sample length, market parameters, order flow and competition, and decide in advance which markets to keep out of tuning. I would check the collateral ledger after every fill and expiry. On the strategy side, I would allow learning in every capital regime and attach a measure of uncertainty to each price estimate before adjusting spreads and size.
+Without the final per-session results, I cannot say exactly what caused the final ranking. I can point to things I would now revisit: smaller-capital sessions keep their opening parameter estimates; `model_ready` can stay fixed as more observations arrive; several execution rules use capital buckets; and a “profit cushion” condition uses collateral cash, which can also fall because money is tied up in open positions.
 
-Counterparty learning and reinforcement learning remain interesting ideas. I did not implement RL in this competition. I would want a trustworthy environment and a simpler baseline before using it, so that an impressive simulated result had something meaningful to compare with.
+The visible score was encouraging. It was not a certificate that the bot would behave well in a different market.
 
-I used AI throughout the project. It helped explain unfamiliar concepts and generate code, and it sometimes suggested more complexity than the evidence supported. My most useful contribution was asking why a change did nothing, noticing when the objective had drifted, and insisting that the code be built in pieces I could understand. I am keeping the project because those questions are useful beyond this particular competition.
+## Keeping the project going
+
+After the contest, I read other participants' code and found the community arena. Having a local environment means I can inspect trades and test more than the same familiar sixteen sessions. It does not give me the official hidden tests, but it gives me a much better place to work.
+
+Next, I want to separate markets used for tuning from markets used for checking the result, vary the history length and market conditions, and reconcile the cash ledger after fills and expiry. I would also revisit learning in every capital regime, pricing uncertainty and risk shared across contracts.
+
+Counterparty learning and RL are still interesting directions. I did not implement RL during the competition. Before trying it, I want an environment I trust and a simple baseline worth beating.
+
+I am keeping this repo as a record of the whole attempt, including the ideas that went nowhere. The part I want to carry forward is the habit of asking what a result actually shows: whether a change reached the exchange, whether it addressed the real constraint, and whether it still works somewhere I haven't already spent hours tuning it.

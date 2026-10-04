@@ -1,11 +1,21 @@
-# Sources and ownership
+# 来源与复用 / Sources and reuse
 
-This is Tony Tang's personal record of the 2026 Akuna Virtual Trading Challenge. It is not affiliated with or endorsed by Akuna Capital.
+这是 Tony Tang 的个人比赛记录，不是 Akuna 官方项目。
 
-The submitted MarketMaker strategy was developed during the competition with assistance from ChatGPT and Codex. `model.py`, the scripts and local tests were added when preparing this post-competition repository. The original HackerRank scaffold, group conversations and screenshots are not included.
+This is Tony Tang's personal competition record, not an official Akuna project.
 
-The external community arena is maintained by [strixthekiet](https://github.com/strixthekiet/AkunaVirtualTradingChallenge2026Arena). The adapter was written for its public interface at commit `7a9f2e6f0eff5785d13873fd07c560f3c9728cf2`. At the time of review, the upstream repository did not include an explicit license. Its source is not vendored or relicensed here; obtain it separately from the original repository.
+`bot.py` 保留比赛期间在 ChatGPT、Codex 帮助下逐步完成的策略。`model.py`、脚本和本地测试是整理赛后仓库时补上的。原 HackerRank 模板、群聊和截图没有放进来。
 
-[Luke Abraham's project](https://github.com/lukeabraham24777/akuna-virtual-trading-challenge) was read after the competition for comparison. Its strategy code and simulator are not copied into this repository.
+`bot.py` preserves the strategy developed during the competition with help from ChatGPT and Codex. The local interface, scripts and tests were added when preparing this repository afterwards. The original HackerRank template, group conversations and screenshots aren't included.
 
-This repository currently has no general redistribution license. Contact the author if you want to reuse substantial parts. Linking to an external project does not change that project's licensing or terms.
+社区 arena 由 [strixthekiet](https://github.com/strixthekiet/AkunaVirtualTradingChallenge2026Arena) 维护。适配器基于提交 `7a9f2e6f0eff5785d13873fd07c560f3c9728cf2` 的公开接口。查看时上游没有明确许可证，所以这里没有复制或重新授权其源码；使用时请从原仓库单独获取。
+
+The community arena is maintained by [strixthekiet](https://github.com/strixthekiet/AkunaVirtualTradingChallenge2026Arena). The adapter targets its public interface at commit `7a9f2e6f0eff5785d13873fd07c560f3c9728cf2`. At the time of review, the upstream repository had no explicit license, so its source isn't copied or relicensed here. Obtain it separately from the original repository.
+
+[Luke Abraham 的项目](https://github.com/lukeabraham24777/akuna-virtual-trading-challenge) 是赛后阅读的参考，其策略代码和模拟器没有复制到这里。
+
+[Luke Abraham's project](https://github.com/lukeabraham24777/akuna-virtual-trading-challenge) was a post-competition reference. Its strategy and simulator aren't copied here.
+
+本仓库目前没有通用的再分发许可证。如果想复用较大部分，欢迎先联系我；外部项目仍按各自的条款使用。
+
+This repository doesn't currently grant a general redistribution license. If you'd like to reuse substantial parts, please get in touch. External projects retain their own terms.

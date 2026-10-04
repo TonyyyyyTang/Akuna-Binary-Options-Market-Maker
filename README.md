@@ -1,45 +1,57 @@
 # Binary Options Market Making
 
-My submission and notes from the 2026 Akuna Virtual Trading Challenge.
+**中文** · [English](README.en.md)
 
-This was my first binary-options market-making project. I understood the 0-or-1 payoff, but RFQs, FOK orders and the competition's cash accounting were new to me. My first questions were fairly basic: who was the bot trading against, when could I run it, and what actually happened to the cash after a trade?
+这是我参加 2026 Akuna Virtual Trading Challenge 时写的做市机器人，也留着我一路追问、试错和改版本的痕迹。
 
-The final version scored **18.5/20 on the tests available during development**. I **did not finish in the top 30 in the final results**. I have kept both facts here. The project taught me how to build a working market maker, and the final result showed how much my testing process still needed to improve.
+合约到期不是 0 就是 1；轮到机器人做决策，就没有这么干脆了。
 
-## What the bot does
+比赛期间能看到的测试最后做到 **18.5/20**，正式结果没有进入前三十。这中间的落差，值得我再学一遍。所以这个仓库不只有最后的代码，也留下了它是怎么长出来的。
 
-The contracts pay one if an event happens at expiry and zero otherwise. They reference a simulated interest rate (FED), two fictional company valuations (AJR and THR), or which company is worth more.
+## 从哪里开始的
 
-The bot estimates parameters from historical observations, prices those events, returns two-sided RFQ quotes, and accepts or rejects FOK orders. Trade sizes are limited by worst-case losses and inventory capacity. It maintains a separate collateral ledger because closing a position does not immediately release the cash held by the competition's grader.
+一开始，我能理解 binary option 的收益，却不太理解做市的过程：RFQ 到底是谁来问价？客户买，我为什么是在卖？FOK 能不能只接一部分？每次运行测试，会不会把上一次的本金继续花掉？
 
-[`bot.py`](bot.py) contains the final V7B strategy. Its trading logic is preserved, including the heuristics I would now reconsider. [`model.py`](model.py) supplies a small, independently written interface for running it locally; it is not the original HackerRank template.
+我也没有一开始就写出一个完整的 bot。先取个名字，再用 `bid=0`、`offer=1`、`quantity=1` 跑起来，接着一点点补定价：FED 的离散状态转移、两家公司的估值分布、最后是公司之间的比较合约。中间还顺便补了 Python——包括那个很小、但足以让程序停下来的区别：`items` 和 `items()`。
 
-## The part that changed my thinking
+定价样例对上了，收益却没跟着起飞。我先在 FOK 和价差上折腾了不少轮，后来才发现：**quantity 一直是 1**。价格改了不少，柜台上始终只有一张合约。把 `bid=0`、`offer=1` 这组边界报价的数量提到 10 后，一个开发测试的收益从 6 变成了 27。这次突破不在模型更复杂，而在终于找到真正卡住成交的地方。
 
-I started with a bid of 0, an offer of 1 and a quantity of one. That gave me something which could survive the trading tests while I added the pricer, one contract type at a time.
+之后试了主动报价数量、现金预算、库存偏移、滚动估计和订单反馈。有些有效，有些顾此失彼，还有不少让我再次发出那句熟悉的“还是没有变化”。版本也确实乱过，后来才养成保留稳定版、记录完整收益序列、一次比较一个改动的习惯。
 
-Correct pricing did not suddenly make the bot competitive. I spent quite a while adjusting FOK filters and spreads, often getting exactly the same results back. Eventually I noticed that quantity was still one. Increasing the size at the zero-loss boundary prices moved one development case's profit from 6 to 27. Extending sizing to active quotes made the available capital matter much more.
+更完整的过程在[中文复盘](docs/retrospective.zh-CN.md)和 [English retrospective](docs/retrospective.md) 里。[实验记录](docs/experiments.md)也留下了一些最后没采用的想法。
 
-Later I tried inventory skew, rolling estimates, counterparty feedback and order-flow signals. Some changes did nothing; others helped one case and hurt another. I also got my versions mixed up. Saving the full result vectors and keeping a stable version became useful habits partway through the competition, rather than something I had planned from the start.
+## 这个 bot 在做什么
 
-The longer version of this story is in [my retrospective](docs/retrospective.md), with [Chinese notes](docs/retrospective.zh-CN.md). The [strategy notes](docs/strategy.md) explain the pricing and cash accounting; the [experiment notes](docs/experiments.md) include ideas I decided not to keep.
+交易的是三个模拟标的上的事件合约：利率 FED，以及两家虚构公司的估值 AJR、THR。事件发生，到期支付 1；否则支付 0。也有比较两家公司估值高低的合约。
 
-## Recorded development results
+机器人主要做四件事：
 
-| Measure | V7B |
+- 从历史数据估计参数，把事件概率转成理论价格。
+- 回答 RFQ，给出双边价格和愿意成交的数量。
+- 判断 FOK 的价格是否值得接，以及整张订单能否承担。
+- 跟踪仓位和现金占用，让交易规模受到最坏损失约束。
+
+这个比赛的现金机制很特别：平掉仓位不等于立刻拿回抵押金。因此 bot 还维护了自己的资金账本。公式和实现细节见[策略说明](docs/strategy.md)。
+
+[bot.py](bot.py) 是最终提交的 V7B，保留了当时的策略，包括现在看来还需要改的分支。[model.py](model.py) 是赛后补的本地接口，不是原 HackerRank 模板。
+
+## 留一份成绩单
+
+| 开发测试记录 / Development results | V7B |
 | --- | ---: |
-| Development test score | 18.50 / 20 |
-| Score across the 16 trading sessions | 14.50 / 16 |
-| Trading sessions with full credit | 12 / 16 |
-| Sum of recorded trading-session PnL | 284.76 |
-| Bankruptcies in those recorded runs | 0 |
-| Final competition outcome | Outside the top 30 |
+| 总分 / Overall score | 18.50 / 20 |
+| 16 个计分交易场景 / Scored trading sessions | 14.50 / 16 |
+| 满分交易场景 / Full-credit sessions | 12 / 16 |
+| 各场 PnL 之和 / Sum of session PnL | 284.76 |
+| 这些运行中的破产次数 / Bankruptcies | 0 |
 
-These are manually recorded development outputs, not a final hidden-test score or a return on a real account. The full vectors are in [`results/`](results/). In one session the bot lost 7.05 and still earned full credit because the other makers lost more. That was a useful reminder that the contest ranked makers within each session.
+完整序列放在 [results/](results/)，是比赛期间手动保存的开发测试输出；官方最终评测的逐场结果我没有拿到。
 
-## Run the local checks
+有一场亏了 7.05，仍然拿到满分，因为其他做市商亏得更多。这场比赛让我很具体地理解了“收益”和“名次”为什么不是一回事。
 
-Python 3.11 or newer, with no additional packages:
+## 在本地跑起来
+
+Python 3.11 或更新版本即可，本地检查不需要额外安装包：
 
 ```bash
 python3 -m unittest discover -s tests -v
@@ -47,24 +59,22 @@ python3 scripts/check_results.py
 python3 scripts/export_submission.py --output .local/submission.py
 ```
 
-The tests cover the supplied-parameter pricing examples and the cash and settlement rules. They do not establish profitability in new markets. The exporter prints the class for use with a compatible contest template; `bot.py` remains the maintained source.
+测试检查定价例子、资金账本和结算规则。最后一条命令导出 `MarketMaker` 类，供兼容的比赛模板使用；日常维护的源文件仍是 `bot.py`。
 
-## Testing after the competition
+## 比赛结束了，bot 还可以上场
 
-The community [AkunaVirtualTradingChallenge2026Arena](https://github.com/strixthekiet/AkunaVirtualTradingChallenge2026Arena) provides a separate exchange and public scenarios. It supports local matches and live matches between bots. It does not reproduce Akuna's official hidden tests.
+赛后找到的社区 [AkunaVirtualTradingChallenge2026Arena](https://github.com/strixthekiet/AkunaVirtualTradingChallenge2026Arena)，提供了交易环境、公开场景和竞争机器人，可以继续在本地对战，也支持线上 bot 对战。
 
-This repository includes an offline adapter so the submitted bot can be tested against the arena's reference makers. The arena stays in a separate checkout, with credit to its author. I ran all 27 public cases once to check the integration and kept the per-case results. See [the arena instructions](docs/arena.md) for setup, reproducible runs and differences from the competition interface.
+它不是 Akuna 官方隐藏测试的复刻，但很适合把“下一次会怎么样”变成一个能运行的实验。我加了本地适配器，跑完一轮 27 个公开场景，并把逐场结果留下来。Arena 保持为独立仓库，安装和使用方式见[双语运行说明](docs/arena.md)。
 
-## What I would change next
+## 下次我会先做什么
 
-I repeatedly evaluated candidates against the same tests. Some choices ended up depending on initial-capital buckets because they worked in those observed cases. I had not set aside a separate group of markets before tuning.
+我后期已经开始问：为什么一个改动只影响某个熟悉的测试？按初始本金写这么多门槛，是在理解风险，还是在记住题目？这些疑问是对的，只是当时没有及时配上一套独立验证。
 
-I would now start with broader evaluation: different histories, market parameters, customers and competitors, with some cases kept out of the tuning loop. Then I would revisit the frozen model-readiness switch, distinguish pricing uncertainty from available cash, and manage exposure across related contracts. Adding another trading feature would come after that.
+现在再做，我会先准备更多市场、客户和竞争者，把一部分场景留在调参之外，再去改模型和报价。跨合约风险、定价不确定性、库存管理都值得继续研究，但得先有一个能分清“真进步”和“这次碰巧”的测试环境。
 
-## Assistance and sources
+## 一路上的工具和参考
 
-I used ChatGPT and Codex for explanations, Python debugging, candidate implementations and code review. I ran the submissions, questioned assumptions, compared the outputs and chose which versions to retain. The unsuccessful experiments are part of the record too.
+这一路也没少找 ChatGPT 和 Codex 帮忙：讲概念、查 Python 错误、讨论候选实现。我经常追问的还是“为什么”，以及“先写哪一部分，才能让我真的看懂”。有代码是一回事，知道它什么时候会失灵，是另一回事。
 
-The contest design belongs to Akuna Capital. The arena belongs to [strixthekiet](https://github.com/strixthekiet/AkunaVirtualTradingChallenge2026Arena). I also read [Luke Abraham's repository](https://github.com/lukeabraham24777/akuna-virtual-trading-challenge) after the competition; it helped me think more carefully about calibration and validation. Those post-competition observations are not presented as features I implemented during the contest.
-
-This is a personal project, not an official Akuna repository.
+感谢 Akuna 出了这个让我认真折腾了一阵的题目。赛后也读了 [Luke Abraham 的项目](https://github.com/lukeabraham24777/akuna-virtual-trading-challenge)，并用到了 [strixthekiet 的 arena](https://github.com/strixthekiet/AkunaVirtualTradingChallenge2026Arena)。相关来源和复用说明在 [NOTICE](NOTICE.md)。
