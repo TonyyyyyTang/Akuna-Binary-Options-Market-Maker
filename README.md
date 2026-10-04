@@ -1,4 +1,3 @@
-/opt/homebrew/Library/Homebrew/cmd/shellenv.sh: line 27: /bin/ps: Operation not permitted
 # Binary Options Market Making
 
 My submission and notes from the 2026 Akuna Virtual Trading Challenge.
@@ -54,7 +53,7 @@ The tests cover the supplied-parameter pricing examples and the cash and settlem
 
 The community [AkunaVirtualTradingChallenge2026Arena](https://github.com/strixthekiet/AkunaVirtualTradingChallenge2026Arena) provides a separate exchange and public scenarios. It supports local matches and live matches between bots. It does not reproduce Akuna's official hidden tests.
 
-This repository includes an offline adapter so the submitted bot can be tested against the arena's reference makers. The arena stays in a separate checkout, with credit to its author. See [the arena instructions](docs/arena.md) for setup, reproducible runs and differences from the competition interface.
+This repository includes an offline adapter so the submitted bot can be tested against the arena's reference makers. The arena stays in a separate checkout, with credit to its author. I ran all 27 public cases once to check the integration and kept the per-case results. See [the arena instructions](docs/arena.md) for setup, reproducible runs and differences from the competition interface.
 
 ## What I would change next
 
